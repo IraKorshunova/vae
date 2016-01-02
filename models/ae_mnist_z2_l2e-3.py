@@ -1,10 +1,9 @@
 import cPickle
 import gzip
 from collections import namedtuple
-
 import lasagne
 import theano.tensor as T
-from extra_layers import SamplingLayer
+from lasagne.regularization import regularize_layer_params, l2
 
 batch_size = 100
 nhidden = 400
@@ -18,12 +17,12 @@ learning_rate_schedule = {
     300: 0.00005,
     400: 0.00001
 }
-max_epoch = 500
+max_epoch = 100  # 28
 validate_every = 500  # iterations
 save_every = 2  # epochs
 
 f = gzip.open('data/mnist.pkl.gz', 'rb')
-(x_train, _), (x_valid, _), (x_test, _) = cPickle.load(f)
+(x_train, y_train), (x_valid, _), (x_test, _) = cPickle.load(f)
 f.close()
 ntrain, input_dim = x_train.shape
 
@@ -33,11 +32,9 @@ def build_model():
     l_in = lasagne.layers.InputLayer((batch_size, input_dim))
     l_enc = lasagne.layers.DenseLayer(l_in, num_units=nhidden, nonlinearity=nonlin_enc)
 
-    l_mu = lasagne.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=lasagne.nonlinearities.identity)
-    l_log_sigma = lasagne.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=lasagne.nonlinearities.identity)
-
-    # sample z
-    l_z = SamplingLayer(mu=l_mu, log_sigma=l_log_sigma)
+    l_z = lasagne.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=lasagne.nonlinearities.identity)
+    l_mu = l_z
+    l_log_sigma = l_z
 
     # decoder
     l_dec = lasagne.layers.DenseLayer(l_z, num_units=nhidden, nonlinearity=nonlin_dec)
@@ -53,12 +50,11 @@ def build_decoder():
     return namedtuple('Decoder', ['l_out', 'l_z'])(l_out, l_z)
 
 
-def build_objective(l_in, l_out, l_mu, l_log_sigma, deterministic=False):
-    x_out = lasagne.layers.get_output(l_out, deterministic=deterministic)
-    x_in = l_in.input_var
-    mu = lasagne.layers.get_output(l_mu, deterministic=deterministic)
-    log_sigma = lasagne.layers.get_output(l_log_sigma, deterministic=deterministic)
-    dkl = 0.5 * T.sum(1 + 2 * log_sigma - mu ** 2 - T.exp(2 * log_sigma), axis=1)
+def build_objective(model, deterministic=False):
+    x_out = lasagne.layers.get_output(model.l_out, deterministic=deterministic)
+    x_in = model.l_in.input_var
     log_p_x_given_z = - T.sum(T.nnet.binary_crossentropy(x_out, x_in), axis=1)
-    loss = - T.mean(dkl + log_p_x_given_z)  # negative lower bound
+    loss = - T.mean(log_p_x_given_z)
+    l2_penalty = regularize_layer_params(lasagne.layers.get_all_layers(model.l_out), l2) * 1e-3
+    loss += l2_penalty
     return namedtuple('Objective', ['loss'])(loss)

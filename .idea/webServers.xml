@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="152d9558-ac43-4588-b7fb-8f9e9d136082" name="paard" url="http://paard">
+        <fileTransfer host="paard" port="22" accessType="SFTP" password="dfc3dfc1dfc5dfd8dfd9dfc2dfdfdfc4" username="ikorshun">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="818c4a64-9604-4b0f-afd9-1ab5c1b7e13d" name="koe" url="http://koe">
+        <fileTransfer host="koe" port="22" accessType="SFTP" password="dfc3dfc1dfc5dfd8dfd9dfc2dfdfdfc4" username="ikorshun">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

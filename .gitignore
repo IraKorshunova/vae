@@ -1,0 +1,6 @@
+data
+*.txt
+*.pkl
+*.mid
+*.pyc
+.idea

@@ -15,12 +15,12 @@ theano.config.warn_float64 = 'warn'
 print
 if len(sys.argv) < 2:
     print "Usage: %s <config name>" % os.path.basename(__file__)
-    config_name = 'vae_mnist'
+    config_name = 'vae_mnist_z2_e30'
 else:
     config_name = sys.argv[1]
 
 print "Model:", config_name
-config = importlib.import_module("%s" % config_name)
+config = importlib.import_module("models.%s" % config_name)
 
 expid = "%s-%s-%s" % (config_name, platform.node(), time.strftime("%Y%m%d-%H%M%S", time.localtime()))
 print "expid:", expid
@@ -45,8 +45,8 @@ print
 
 # build loss
 if hasattr(config, 'build_objective'):
-    obj = config.build_objective(model.l_in, model.l_out, model.l_mu, model.l_log_sigma)
-    obj_valid = config.build_objective(model.l_in, model.l_out, model.l_mu, model.l_log_sigma, deterministic=True)
+    obj = config.build_objective(model)
+    obj_valid = config.build_objective(model, deterministic=True)
 else:
     raise NotImplementedError
 
@@ -65,8 +65,8 @@ idxs = T.ivector('idx')
 givens = {model.l_in.input_var: xtrain_shared[idxs]}
 
 train = theano.function([idxs], obj.loss, givens=givens, updates=updates, allow_input_downcast=True)
-eval_valid = theano.function([], obj.loss, givens={model.l_in.input_var: xtrain_shared})
-eval_train = theano.function([], obj.loss, givens={model.l_in.input_var: xvalid_shared})
+eval_valid = theano.function([], obj_valid, givens={model.l_in.input_var: xtrain_shared})
+eval_train = theano.function([], obj_valid, givens={model.l_in.input_var: xvalid_shared})
 
 train_data_iter = DataIterator(config.ntrain, config.batch_size)
 
@@ -102,10 +102,15 @@ for epoch in xrange(start_epoch, config.max_epoch):
 
             valid_loss = eval_valid()
             losses_eval_valid.append(valid_loss)
-            print "   validation  loss:\t%.6f" % valid_loss
             eval_train_loss = eval_valid()
             losses_eval_train.append(eval_train_loss)
-            print "   train  loss:\t%.6f" % eval_train_loss
+            if 'vae' in config.__name__:
+                print 'validation loss: %0.4f KL: %0.4f CE: %0.4f' % (valid_loss[0], -valid_loss[1], valid_loss[2])
+                print 'train loss: %0.4f KL: %0.4f CE: %0.4f' % (
+                    eval_train_loss[0], -eval_train_loss[1], eval_train_loss[2])
+            else:
+                print 'validation loss: %0.4f' % valid_loss[0]
+                print 'train loss: %0.4f' % eval_train_loss[0]
             print
 
     if (epoch + 1) % config.save_every == 0:
