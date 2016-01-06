@@ -46,7 +46,9 @@ def plot_codes(metadata, config, target_path):
     ax = fig.add_subplot(111, aspect='equal')
     if 'vae' in config.__name__:
         sigma = np.exp(log_sigma)
-        ells = [Ellipse(xy=mu[i, :], width=3 * sigma[i, 0], height=3 * sigma[i, 1], angle=0)
+        # ells = [Ellipse(xy=mu[i, :], width=3*sigma[i, 0], height=3*sigma[i, 1], angle=0)
+        #         for i in range(len(mu))]
+        ells = [Ellipse(xy=mu[i, :], width=0.07, height=0.07, angle=0)
                 for i in range(len(mu))]
     else:
         ells = [Ellipse(xy=mu[i, :], width=1, height=1, angle=0)
@@ -87,7 +89,7 @@ def draw_homotopy(metadata, config, target_path, idx1, idx2):
 
     for p in p_range:
         zp = p * mu1 + (1 - p) * mu2
-        zp = np.expand_dims(zp, axis=0)
+        zp = zp[np.newaxis, :]
         xp_hat = decode(zp)
 
         xp_hat = np.reshape(xp_hat, (28, 28))
@@ -130,12 +132,9 @@ def draw_tile(metadata, config, target_path):
 
 
 if __name__ == '__main__':
-    metadata_path = 'metadata/ae_mnist_z2-koe-20151202-150344.pkl'
-    # metadata_path = 'metadata/vae_mnist_z2_e200-koe-20151202-151803.pkl'
-    # metadata_path = 'metadata/vae_mnist_z2_e500-koe-20151202-155453.pkl'
-    # metadata_path = 'metadata/vae_mnist_z2_e100-koe-20151202-144649.pkl'
-    # metadata_path = 'metadata/vae_mnist_z2_e30-koe-20151202-144001.pkl'
-    # metadata_path = 'metadata/vae_mnist_z2_e500-koe-20151203-115516.pkl'
+    metadata_path = 'metadata/ae_mnist_z2_l2reg_e150-geit-20160106-103248.pkl'
+    # metadata_path = 'metadata/ae_mnist_z2_e100-geit-20160105-120222.pkl'
+    # metadata_path = 'metadata/vae_mnist_z2_e150-geit-20160105-172854.pkl'
 
     with open(metadata_path) as f:
         metadata = pickle.load(f)

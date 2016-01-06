@@ -1,12 +1,12 @@
 import cPickle
 import gzip
 from collections import namedtuple
-import lasagne
+import lasagne as nn
 import theano.tensor as T
 from extra_layers import SamplingLayer
 
-batch_size = 100
-nhidden = 400
+batch_size = 64
+nhidden = 512
 nonlin_enc = T.tanh
 nonlin_dec = T.tanh
 latent_size = 2
@@ -17,7 +17,7 @@ learning_rate_schedule = {
     300: 0.00005,
     400: 0.00001
 }
-max_epoch = 500
+max_epoch = 150
 validate_every = 500  # iterations
 save_every = 2  # epochs
 
@@ -29,36 +29,35 @@ ntrain, input_dim = x_train.shape
 
 def build_model():
     # encoder
-    l_in = lasagne.layers.InputLayer((batch_size, input_dim))
-    l_enc = lasagne.layers.DenseLayer(l_in, num_units=nhidden, nonlinearity=nonlin_enc)
+    l_in = nn.layers.InputLayer((batch_size, input_dim))
+    l_enc = nn.layers.DenseLayer(l_in, num_units=nhidden, nonlinearity=nonlin_enc)
 
-    l_mu = lasagne.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=lasagne.nonlinearities.identity)
-    l_log_sigma = lasagne.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=lasagne.nonlinearities.identity)
+    l_mu = nn.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=nn.nonlinearities.identity)
+    l_log_sigma = nn.layers.DenseLayer(l_enc, num_units=latent_size, nonlinearity=nn.nonlinearities.identity)
 
     # sample z
     l_z = SamplingLayer(mu=l_mu, log_sigma=l_log_sigma)
 
     # decoder
-    l_dec = lasagne.layers.DenseLayer(l_z, num_units=nhidden, nonlinearity=nonlin_dec)
-    l_out = lasagne.layers.DenseLayer(l_dec, num_units=input_dim, nonlinearity=lasagne.nonlinearities.sigmoid)
+    l_dec = nn.layers.DenseLayer(l_z, num_units=nhidden, nonlinearity=nonlin_dec)
+    l_out = nn.layers.DenseLayer(l_dec, num_units=input_dim, nonlinearity=nn.nonlinearities.sigmoid)
 
     return namedtuple('Model', ['l_in', 'l_out', 'l_mu', 'l_log_sigma', 'l_dec'])(l_in, l_out, l_mu, l_log_sigma, l_dec)
 
 
 def build_decoder():
-    l_z = lasagne.layers.InputLayer((None, latent_size))
-    l_dec = lasagne.layers.DenseLayer(l_z, num_units=nhidden, nonlinearity=nonlin_dec)
-    l_out = lasagne.layers.DenseLayer(l_dec, num_units=input_dim, nonlinearity=lasagne.nonlinearities.sigmoid)
+    l_z = nn.layers.InputLayer((None, latent_size))
+    l_dec = nn.layers.DenseLayer(l_z, num_units=nhidden, nonlinearity=nonlin_dec)
+    l_out = nn.layers.DenseLayer(l_dec, num_units=input_dim, nonlinearity=nn.nonlinearities.sigmoid)
     return namedtuple('Decoder', ['l_out', 'l_z'])(l_out, l_z)
 
 
 def build_objective(model, deterministic=False):
-    x_out = lasagne.layers.get_output(model.l_out, deterministic=deterministic)
+    x_out = nn.layers.get_output(model.l_out, deterministic=deterministic)
     x_in = model.l_in.input_var
-    mu = lasagne.layers.get_output(model.l_mu, deterministic=deterministic)
-    log_sigma = lasagne.layers.get_output(model.l_log_sigma, deterministic=deterministic)
+    mu = nn.layers.get_output(model.l_mu, deterministic=deterministic)
+    log_sigma = nn.layers.get_output(model.l_log_sigma, deterministic=deterministic)
     dkl = T.mean(0.5 * T.sum(1 + 2 * log_sigma - mu ** 2 - T.exp(2 * log_sigma), axis=1))
     log_p_x_given_z = - T.mean(T.sum(T.nnet.binary_crossentropy(x_out, x_in), axis=1))
     loss = - dkl - log_p_x_given_z
     return namedtuple('Objective', ['loss', 'kl', 'ce'])(loss, dkl, log_p_x_given_z)
-

@@ -12,10 +12,9 @@ import utils
 from data_iter import DataIterator
 
 theano.config.warn_float64 = 'warn'
-print
+
 if len(sys.argv) < 2:
-    print "Usage: %s <config name>" % os.path.basename(__file__)
-    config_name = 'vae_mnist_z2_e30'
+    sys.exit("Usage: %s <config name>" % os.path.basename(__file__))
 else:
     config_name = sys.argv[1]
 
